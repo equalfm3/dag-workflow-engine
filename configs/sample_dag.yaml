@@ -1,0 +1,101 @@
+# Sample ETL pipeline DAG definition
+# Demonstrates task dependencies, retry configuration, and metadata
+
+name: etl_pipeline
+
+tasks:
+  - name: extract_orders
+    retries: 3
+    timeout: 120
+    metadata:
+      source: postgres
+      table: orders
+      priority: high
+
+  - name: extract_customers
+    retries: 3
+    timeout: 120
+    metadata:
+      source: postgres
+      table: customers
+      priority: high
+
+  - name: fetch_exchange_rates
+    retries: 5
+    timeout: 60
+    metadata:
+      source: api
+      endpoint: https://api.exchangerate.host/latest
+      priority: medium
+
+  - name: validate_orders
+    retries: 1
+    timeout: 60
+    depends_on:
+      - extract_orders
+    metadata:
+      checks:
+        - not_null
+        - schema_match
+
+  - name: validate_customers
+    retries: 1
+    timeout: 60
+    depends_on:
+      - extract_customers
+    metadata:
+      checks:
+        - not_null
+        - unique_id
+
+  - name: transform_data
+    retries: 2
+    timeout: 300
+    depends_on:
+      - validate_orders
+      - validate_customers
+      - fetch_exchange_rates
+    metadata:
+      operations:
+        - join
+        - currency_convert
+        - aggregate
+
+  - name: load_warehouse
+    retries: 3
+    timeout: 180
+    depends_on:
+      - transform_data
+    metadata:
+      target: redshift
+      schema: analytics
+      table: order_summary
+
+  - name: generate_report
+    retries: 1
+    timeout: 120
+    depends_on:
+      - load_warehouse
+    metadata:
+      format: pdf
+      recipients:
+        - analytics@company.com
+
+  - name: send_notifications
+    retries: 2
+    timeout: 30
+    depends_on:
+      - load_warehouse
+    metadata:
+      channels:
+        - slack
+        - email
+
+  - name: cleanup_staging
+    retries: 0
+    timeout: 60
+    depends_on:
+      - generate_report
+      - send_notifications
+    metadata:
+      action: drop_temp_tables

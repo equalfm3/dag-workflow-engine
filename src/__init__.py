@@ -1,1 +1,1 @@
-# DAG Workflow Engine
+"""DAG Workflow Engine — task orchestration with dependency resolution."""

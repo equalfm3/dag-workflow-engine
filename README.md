@@ -235,7 +235,7 @@ dag-workflow-engine/
 ├── configs/
 │   └── sample_dag.yaml
 ├── data/
-├── notebooks/
+│   └── README.md
 ├── requirements.txt
 ├── .gitignore
 └── README.md
